@@ -47,6 +47,21 @@ There is no test suite.
 
 `mason-lspconfig` still maps `stylelint_lsp` to the deprecated `stylelint-lsp` package. The workaround in `lua/plugins/nvim-lspconfig.lua` sets `mason = false` for `stylelint_lsp`, and `lua/plugins/mason.lua` ensures the correct `stylelint-language-server` package is installed instead. Don't "fix" this by enabling Mason auto-install for `stylelint_lsp` — it will pull the wrong binary.
 
+### C#/Razor: roslyn.nvim, not the extra's OmniSharp
+
+`lazyvim.json` enables `lazyvim.plugins.extras.lang.dotnet`, but that extra is still built around OmniSharp, which is discontinued and cannot read Razor at all. `lua/plugins/roslyn.lua` puts `seblyng/roslyn.nvim` in front of it: same Roslyn server the VS Code C# extension ships, and since it gained co-hosting it serves `.razor`/`.cshtml` too. `rzls.nvim` is deprecated — do not add it back.
+
+Four servers are switched off in `lua/plugins/nvim-lspconfig.lua`, and `roslyn_ls` is the one that matters: `mason-lspconfig` auto-enables every installed server, and the `roslyn-language-server` Mason package maps to it, so simply installing the binary gets you a *second* Roslyn client on every buffer. Two clients means every diagnostic twice and two solution loads.
+
+Other things worth knowing:
+
+- The binary comes from the `roslyn-language-server` Mason package; roslyn.nvim finds it in `$MASON/bin` unaided. It is not an `lspconfig` server name, so it has to be listed in `lua/plugins/mason.lua` explicitly.
+- Razor needs an LSP client literally named `html` — the co-hosting path forwards the markup half of a `.razor` file to it on a virtual `__virtual.html` buffer. That is why `opts.servers.html = {}` is set.
+- Razor co-hosting answers all nine of Roslyn's pull-diagnostic providers with the same full set, so each warning would land in nine namespaces. `lua/plugins/roslyn.lua` keeps one provider for Razor buffers. C# files are unaffected — there each provider reports its own category.
+- `cs` and `razor` are pointed at LSP formatting rather than the extra's csharpier, since .NET solutions here carry no `.editorconfig` and are edited from Visual Studio; csharpier would rewrite whole files on the first `<leader>cf`.
+- Background analysis is scoped to open files. Full-solution analysis on a real solution buries the current file's diagnostics under the repo's warning baseline.
+- Requires Neovim >= 0.12 and a .NET 10 SDK on `PATH`. `:checkhealth roslyn` verifies the whole chain.
+
 ### Completion / pairs / indent stack
 
 - Completion: `blink.cmp` (replaces the LazyVim default of nvim-cmp via the LazyVim extra mechanism). Ghost text and signature help are on; cmdline completion uses `buffer` for `/`/`?` and `cmdline` otherwise.

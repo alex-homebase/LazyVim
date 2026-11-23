@@ -18,6 +18,24 @@ return {
       filetypes = { "css", "scss", "less", "sass", "postcss" },
     }
 
+    -- C#/Razor is served by roslyn.nvim (see plugins/roslyn.lua), which
+    -- registers the `roslyn` client itself through `vim.lsp.config`. Every
+    -- other C# server has to stay off, or two of them race on the same buffer.
+    -- `roslyn_ls` is the trap: mason-lspconfig auto-enables any installed
+    -- server, and the `roslyn-language-server` Mason package maps to it, so
+    -- installing the binary is enough to get a second Roslyn client.
+    -- `csharp_ls` came from the same auto-enable. `fsautocomplete` is dropped
+    -- for lack of any F# here.
+    opts.servers.roslyn_ls = { enabled = false }
+    opts.servers.omnisharp = { enabled = false }
+    opts.servers.csharp_ls = { enabled = false }
+    opts.servers.fsautocomplete = { enabled = false }
+
+    -- Razor co-hosting forwards the HTML half of a .razor file to a client
+    -- named `html` on a virtual buffer; without it Razor markup gets no
+    -- completion, hover or formatting.
+    opts.servers.html = {}
+
     opts.servers.marksman = {
       settings = {
         markdown = {
